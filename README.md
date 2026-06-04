@@ -1,5 +1,7 @@
 # pi-outfits
 
+![required slop](./slop.png)
+
 Dress Pi for the job.
 
 An outfit is a tiny YAML file that picks the agent's thinking cap, shirt, pants, and shoes:
