@@ -47,6 +47,7 @@ type RawOutfit = Type.Static<typeof RawOutfitSchema>;
 
 const OUTFIT_UI_BACK = "Back";
 const OUTFIT_UI_RELOAD = "Reload outfits";
+const THINKING_LEVEL_SUPERSCRIPTS = ["⁰", "¹", "²", "³", "⁴", "⁵"] as const;
 
 let outfits: Map<string, Outfit> = new Map();
 let loadErrors: string[] = [];
@@ -237,7 +238,7 @@ function getOutfitLabel(currentThinking?: ThinkingLevel): string | undefined {
 		label += `[${lastObservedModel.modelId}]`;
 	}
 	const thinkingIndex = THINKING_LEVELS.indexOf(currentThinking ?? activeOutfit?.thinking ?? "off");
-	return `${label}^${thinkingIndex < 0 ? 0 : thinkingIndex}`;
+	return `${label}${THINKING_LEVEL_SUPERSCRIPTS[thinkingIndex] ?? THINKING_LEVEL_SUPERSCRIPTS[0]}`;
 }
 
 function updateStatus(ctx: ExtensionContext, currentThinking?: ThinkingLevel): void {
