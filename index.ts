@@ -49,6 +49,7 @@ type RawOutfit = Type.Static<typeof RawOutfitSchema>;
 
 const OUTFIT_UI_BACK = "Back";
 const OUTFIT_UI_RELOAD = "Reload outfits";
+const OUTFIT_UI_STOP = "Stop using outfit";
 const THINKING_LEVEL_SUPERSCRIPTS = ["⁰", "¹", "²", "³", "⁴", "⁵"] as const;
 const SIMPLE_OUTFIT_COLORS = ["red", "yellow", "green", "cyan", "blue", "purple", "gray", "white"] as const;
 type SimpleOutfitColor = (typeof SIMPLE_OUTFIT_COLORS)[number];
@@ -188,6 +189,19 @@ function parseModelSelector(selector: string): { provider: string; modelId: stri
 	const slash = selector.indexOf("/");
 	if (slash <= 0 || slash === selector.length - 1) return undefined;
 	return { provider: selector.slice(0, slash), modelId: selector.slice(slash + 1) };
+}
+
+function isStopOutfitSelector(value: string): boolean {
+	return ["off", "none", "stop", "clear"].includes(value.toLowerCase());
+}
+
+function stopUsingOutfit(pi: ExtensionAPI, ctx: ExtensionContext, notify = true, persist = true): void {
+	activeOutfitId = undefined;
+	activeOutfit = undefined;
+	pi.setActiveTools(pi.getAllTools().map((tool) => tool.name));
+	if (persist) pi.appendEntry("outfit-state", {});
+	updateStatus(ctx, pi.getThinkingLevel());
+	if (notify && ctx.hasUI) ctx.ui.notify("Stopped using outfit", "info");
 }
 
 async function applyOutfit(pi: ExtensionAPI, ctx: ExtensionContext, outfitId: string): Promise<void> {
@@ -341,6 +355,16 @@ async function restoreState(pi: ExtensionAPI, ctx: ExtensionContext): Promise<vo
 		.pop() as { data?: { id?: string } } | undefined;
 
 	const flag = pi.getFlag("outfit");
+	if (typeof flag === "string" && flag && isStopOutfitSelector(flag)) {
+		stopUsingOutfit(pi, ctx, false);
+		return;
+	}
+
+	if (entry && !entry.data?.id) {
+		stopUsingOutfit(pi, ctx, false, false);
+		return;
+	}
+
 	const requested = typeof flag === "string" && flag ? flag : entry?.data?.id;
 	if (requested) {
 		await applyOutfit(pi, ctx, requested);
@@ -362,12 +386,18 @@ async function selectOutfitUI(pi: ExtensionAPI, ctx: ExtensionContext): Promise<
 			return;
 		}
 
-		const options = [...names, OUTFIT_UI_RELOAD, OUTFIT_UI_BACK];
+		const options = activeOutfitId
+			? [...names, OUTFIT_UI_STOP, OUTFIT_UI_RELOAD, OUTFIT_UI_BACK]
+			: [...names, OUTFIT_UI_RELOAD, OUTFIT_UI_BACK];
 		const choice = await ctx.ui.select(`Outfit${activeOutfitId ? ` (current: ${activeOutfitId})` : ""}`, options);
 		if (!choice || choice === OUTFIT_UI_BACK) return;
 		if (choice === OUTFIT_UI_RELOAD) {
 			await refreshOutfits(ctx);
 			continue;
+		}
+		if (choice === OUTFIT_UI_STOP) {
+			stopUsingOutfit(pi, ctx);
+			return;
 		}
 		await applyOutfit(pi, ctx, choice);
 		return;
@@ -376,7 +406,7 @@ async function selectOutfitUI(pi: ExtensionAPI, ctx: ExtensionContext): Promise<
 
 export default function outfitsExtension(pi: ExtensionAPI) {
 	pi.registerFlag("outfit", {
-		description: "Outfit to activate from .agents/outfits",
+		description: "Outfit to activate from .agents/outfits, or off/none/stop/clear to stop using one",
 		type: "string",
 	});
 
@@ -384,6 +414,11 @@ export default function outfitsExtension(pi: ExtensionAPI) {
 		description: "Select an outfit",
 		handler: async (args, ctx) => {
 			const name = args.trim();
+			if (isStopOutfitSelector(name)) {
+				stopUsingOutfit(pi, ctx);
+				return;
+			}
+
 			if (name === "reload") {
 				await refreshOutfits(ctx);
 				if (ctx.hasUI) ctx.ui.notify(`Loaded ${outfits.size} outfit(s)`, "info");
