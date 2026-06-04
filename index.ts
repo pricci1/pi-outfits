@@ -8,20 +8,6 @@ import YAML from "yaml";
 
 type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
 
-type RawOutfit = {
-	version: 1;
-	name?: string;
-	description?: string;
-	thinking?: ThinkingLevel;
-	hat?: ThinkingLevel;
-	prompt?: string;
-	shirt?: string;
-	model?: string;
-	pants?: string;
-	tools?: string[];
-	shoes?: string[];
-};
-
 type Outfit = {
 	id: string;
 	path: string;
@@ -56,6 +42,8 @@ const RawOutfitSchema = Type.Object(
 	},
 	{ additionalProperties: false },
 );
+
+type RawOutfit = Type.Static<typeof RawOutfitSchema>;
 
 const OUTFIT_UI_BACK = "Back";
 const OUTFIT_UI_RELOAD = "Reload outfits";
