@@ -28,7 +28,7 @@ const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"] as 
 
 const RawOutfitSchema = Type.Object(
 	{
-		version: Type.Literal(1),
+		version: Type.Optional(Type.Literal(1)),
 		name: Type.Optional(Type.String()),
 		description: Type.Optional(Type.String()),
 		thinking: Type.Optional(Type.Union(THINKING_LEVELS.map((level) => Type.Literal(level)))),
