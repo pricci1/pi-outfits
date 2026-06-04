@@ -1,4 +1,4 @@
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { CustomEditor, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -53,6 +53,7 @@ let loadErrors: string[] = [];
 let activeOutfitId: string | undefined;
 let activeOutfit: Outfit | undefined;
 let lastObservedModel: { provider?: string; modelId?: string } = {};
+let requestEditorRender: (() => void) | undefined;
 
 function getGlobalOutfitsDir(): string {
 	return path.join(os.homedir(), ".agents", "outfits");
@@ -222,17 +223,70 @@ function applyPinnedTools(pi: ExtensionAPI, ctx: ExtensionContext): void {
 	pi.setActiveTools(validTools);
 }
 
+function isRuntimeModelOverride(outfit: Outfit | undefined): boolean {
+	if (!outfit?.model || !lastObservedModel.provider || !lastObservedModel.modelId) return false;
+	const parsed = parseModelSelector(outfit.model);
+	if (!parsed) return false;
+	return parsed.provider !== lastObservedModel.provider || parsed.modelId !== lastObservedModel.modelId;
+}
+
+function getOutfitLabel(currentThinking?: ThinkingLevel): string | undefined {
+	if (!activeOutfitId) return undefined;
+	let label = activeOutfitId;
+	if (isRuntimeModelOverride(activeOutfit) && lastObservedModel.modelId) {
+		label += `[${lastObservedModel.modelId}]`;
+	}
+	const thinkingIndex = THINKING_LEVELS.indexOf(currentThinking ?? activeOutfit?.thinking ?? "off");
+	return `${label}^${thinkingIndex < 0 ? 0 : thinkingIndex}`;
+}
+
 function updateStatus(ctx: ExtensionContext, currentThinking?: ThinkingLevel): void {
 	if (!ctx.hasUI) return;
-	if (!activeOutfitId) {
-		ctx.ui.setStatus("outfit", undefined);
-		return;
+	const label = getOutfitLabel(currentThinking);
+	ctx.ui.setStatus("outfit", label ? ctx.ui.theme.fg("accent", `outfit:${label}`) : undefined);
+	requestEditorRender?.();
+}
+
+class OutfitPromptEditor extends CustomEditor {
+	public outfitLabelProvider?: () => string | undefined;
+
+	override render(width: number): string[] {
+		const lines = super.render(width);
+		const outfit = this.outfitLabelProvider?.();
+		if (!outfit) return lines;
+
+		const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
+		const topPlain = stripAnsi(lines[0] ?? "");
+		const scrollPrefixMatch = topPlain.match(/^(─── ↑ \d+ more )/);
+		const prefix = scrollPrefixMatch?.[1] ?? "──";
+		const labelLeftSpace = prefix.endsWith(" ") ? "" : " ";
+		const labelRightSpace = " ";
+		const minRightBorder = 1;
+		const maxLabelLen = Math.max(0, width - prefix.length - labelLeftSpace.length - labelRightSpace.length - minRightBorder);
+		if (maxLabelLen <= 0) return lines;
+
+		const label = outfit.length > maxLabelLen ? outfit.slice(0, maxLabelLen) : outfit;
+		const labelChunk = `${labelLeftSpace}${label}${labelRightSpace}`;
+		const remaining = width - prefix.length - labelChunk.length;
+		if (remaining < 0) return lines;
+
+		lines[0] = this.borderColor(prefix) + this.borderColor(labelChunk) + this.borderColor("─".repeat(Math.max(0, remaining)));
+		return lines;
 	}
 
-	const model = lastObservedModel.modelId ? `[${lastObservedModel.modelId}]` : "";
-	const thinkingLevel = currentThinking ?? activeOutfit?.thinking;
-	const thinking = thinkingLevel ? `:${thinkingLevel}` : "";
-	ctx.ui.setStatus("outfit", ctx.ui.theme.fg("accent", `outfit:${activeOutfitId}${model}${thinking}`));
+	public requestRenderNow(): void {
+		this.tui.requestRender();
+	}
+}
+
+function applyEditor(pi: ExtensionAPI, ctx: ExtensionContext): void {
+	if (!ctx.hasUI) return;
+	ctx.ui.setEditorComponent((tui, theme, keybindings) => {
+		const editor = new OutfitPromptEditor(tui, theme, keybindings);
+		requestEditorRender = () => editor.requestRenderNow();
+		editor.outfitLabelProvider = () => getOutfitLabel(pi.getThinkingLevel());
+		return editor;
+	});
 }
 
 function persistState(pi: ExtensionAPI): void {
@@ -329,6 +383,7 @@ export default function outfitsExtension(pi: ExtensionAPI) {
 		lastObservedModel = { provider: ctx.model?.provider, modelId: ctx.model?.id };
 		await refreshOutfits(ctx);
 		await restoreState(pi, ctx);
+		applyEditor(pi, ctx);
 		if (loadErrors.length > 0 && ctx.hasUI) {
 			ctx.ui.notify(`Outfit load errors:\n${loadErrors.join("\n")}`, "warning");
 		}
@@ -337,6 +392,7 @@ export default function outfitsExtension(pi: ExtensionAPI) {
 	pi.on("session_tree", async (_event, ctx) => {
 		await refreshOutfits(ctx);
 		await restoreState(pi, ctx);
+		applyEditor(pi, ctx);
 	});
 
 	pi.on("model_select", async (event: any, ctx) => {
