@@ -1,5 +1,5 @@
 {
-  "name": "outfits",
+  "name": "pi-outfits",
   "module": "index.ts",
   "type": "module",
   "private": true,
