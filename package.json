@@ -6,6 +6,7 @@
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "^CURRENT",
     "@earendil-works/pi-tui": "^CURRENT",
+    "typebox": "^1.1.38",
     "yaml": "^2.8.3"
   },
   "peerDependencies": {
