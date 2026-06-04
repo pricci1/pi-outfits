@@ -218,7 +218,7 @@ async function applyOutfit(pi: ExtensionAPI, ctx: ExtensionContext, outfitId: st
 
 	applyPinnedTools(pi, ctx);
 	persistState(pi);
-	updateStatus(ctx);
+	updateStatus(ctx, pi.getThinkingLevel());
 	if (ctx.hasUI) ctx.ui.notify(`Outfit "${outfitId}" activated`, "info");
 }
 
@@ -234,7 +234,7 @@ function applyPinnedTools(pi: ExtensionAPI, ctx: ExtensionContext): void {
 	pi.setActiveTools(validTools);
 }
 
-function updateStatus(ctx: ExtensionContext): void {
+function updateStatus(ctx: ExtensionContext, currentThinking?: ThinkingLevel): void {
 	if (!ctx.hasUI) return;
 	if (!activeOutfitId) {
 		ctx.ui.setStatus("outfit", undefined);
@@ -242,7 +242,8 @@ function updateStatus(ctx: ExtensionContext): void {
 	}
 
 	const model = lastObservedModel.modelId ? `[${lastObservedModel.modelId}]` : "";
-	const thinking = activeOutfit?.thinking ? `:${activeOutfit.thinking}` : "";
+	const thinkingLevel = currentThinking ?? activeOutfit?.thinking;
+	const thinking = thinkingLevel ? `:${thinkingLevel}` : "";
 	ctx.ui.setStatus("outfit", ctx.ui.theme.fg("accent", `outfit:${activeOutfitId}${model}${thinking}`));
 }
 
@@ -352,11 +353,11 @@ export default function outfitsExtension(pi: ExtensionAPI) {
 
 	pi.on("model_select", async (event: any, ctx) => {
 		lastObservedModel = { provider: event.model.provider, modelId: event.model.id };
-		updateStatus(ctx);
+		updateStatus(ctx, pi.getThinkingLevel());
 	});
 
 	pi.on("thinking_level_select", async (_event, ctx) => {
-		updateStatus(ctx);
+		updateStatus(ctx, pi.getThinkingLevel());
 	});
 
 	pi.on("turn_start", async (_event, ctx) => {
