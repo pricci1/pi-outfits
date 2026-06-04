@@ -71,12 +71,13 @@ let activeOutfit: Outfit | undefined;
 let lastObservedModel: { provider?: string; modelId?: string } = {};
 let requestEditorRender: (() => void) | undefined;
 
-function getGlobalOutfitsDir(): string {
-	return path.join(os.homedir(), ".agents", "outfits");
-}
-
-function getProjectOutfitsDir(cwd: string): string {
-	return path.join(cwd, ".agents", "outfits");
+function getOutfitDirs(cwd: string): string[] {
+	return [
+		path.join(os.homedir(), ".agents", "outfits"),
+		path.join(os.homedir(), ".pi", "outfits"),
+		path.join(cwd, ".agents", "outfits"),
+		path.join(cwd, ".pi", "outfits"),
+	];
 }
 
 async function listYamlFiles(dir: string): Promise<string[]> {
@@ -138,7 +139,7 @@ async function loadOutfits(cwd: string): Promise<OutfitLoadResult> {
 	const result = new Map<string, Outfit>();
 	const errors: string[] = [];
 
-	for (const dir of [getGlobalOutfitsDir(), getProjectOutfitsDir(cwd)]) {
+	for (const dir of getOutfitDirs(cwd)) {
 		let files: string[];
 		try {
 			files = await listYamlFiles(dir);
@@ -378,7 +379,7 @@ async function selectOutfitUI(pi: ExtensionAPI, ctx: ExtensionContext): Promise<
 	while (true) {
 		const names = Array.from(outfits.keys()).sort();
 		if (names.length === 0) {
-			const choice = await ctx.ui.select("No outfits found in ~/.agents/outfits or .agents/outfits", [OUTFIT_UI_RELOAD, OUTFIT_UI_BACK]);
+			const choice = await ctx.ui.select("No outfits found in ~/.agents/outfits, ~/.pi/outfits, .agents/outfits, or .pi/outfits", [OUTFIT_UI_RELOAD, OUTFIT_UI_BACK]);
 			if (choice === OUTFIT_UI_RELOAD) {
 				await refreshOutfits(ctx);
 				continue;
@@ -406,7 +407,7 @@ async function selectOutfitUI(pi: ExtensionAPI, ctx: ExtensionContext): Promise<
 
 export default function outfitsExtension(pi: ExtensionAPI) {
 	pi.registerFlag("outfit", {
-		description: "Outfit to activate from .agents/outfits, or off/none/stop/clear to stop using one",
+		description: "Outfit to activate from .agents/outfits or .pi/outfits, or off/none/stop/clear to stop using one",
 		type: "string",
 	});
 
