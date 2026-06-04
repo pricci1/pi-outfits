@@ -13,6 +13,7 @@ type Outfit = {
 	path: string;
 	name?: string;
 	description?: string;
+	color?: string;
 	thinking?: ThinkingLevel;
 	prompt?: string;
 	model?: string;
@@ -31,6 +32,7 @@ const RawOutfitSchema = Type.Object(
 		version: Type.Optional(Type.Literal(1)),
 		name: Type.Optional(Type.String()),
 		description: Type.Optional(Type.String()),
+		color: Type.Optional(Type.String()),
 		thinking: Type.Optional(Type.Union(THINKING_LEVELS.map((level) => Type.Literal(level)))),
 		hat: Type.Optional(Type.Union(THINKING_LEVELS.map((level) => Type.Literal(level)))),
 		prompt: Type.Optional(Type.String()),
@@ -48,6 +50,18 @@ type RawOutfit = Type.Static<typeof RawOutfitSchema>;
 const OUTFIT_UI_BACK = "Back";
 const OUTFIT_UI_RELOAD = "Reload outfits";
 const THINKING_LEVEL_SUPERSCRIPTS = ["⁰", "¹", "²", "³", "⁴", "⁵"] as const;
+const SIMPLE_OUTFIT_COLORS = ["red", "yellow", "green", "cyan", "blue", "purple", "gray", "white"] as const;
+type SimpleOutfitColor = (typeof SIMPLE_OUTFIT_COLORS)[number];
+const SIMPLE_OUTFIT_COLOR_ANSI: Record<SimpleOutfitColor, string> = {
+	red: "\u001b[31m",
+	yellow: "\u001b[33m",
+	green: "\u001b[32m",
+	cyan: "\u001b[36m",
+	blue: "\u001b[34m",
+	purple: "\u001b[35m",
+	gray: "\u001b[90m",
+	white: "\u001b[37m",
+};
 
 let outfits: Map<string, Outfit> = new Map();
 let loadErrors: string[] = [];
@@ -102,6 +116,7 @@ function normalizeOutfit(id: string, filePath: string, raw: RawOutfit): Outfit {
 		path: filePath,
 		name: raw.name,
 		description: raw.description,
+		color: raw.color,
 		thinking: raw.thinking ?? raw.hat,
 		prompt: raw.prompt ?? raw.shirt,
 		model: raw.model ?? raw.pants,
@@ -163,6 +178,7 @@ function buildDescription(outfit: Outfit): string {
 	const parts: string[] = [];
 	if (outfit.model) parts.push(outfit.model);
 	if (outfit.thinking) parts.push(`thinking:${outfit.thinking}`);
+	if (outfit.color) parts.push(`color:${outfit.color}`);
 	if (outfit.tools) parts.push(`tools:${outfit.tools.join(",")}`);
 	if (outfit.description) parts.push(outfit.description);
 	return parts.join(" | ");
@@ -241,6 +257,27 @@ function getOutfitLabel(currentThinking?: ThinkingLevel): string | undefined {
 	return `${label}${THINKING_LEVEL_SUPERSCRIPTS[thinkingIndex] ?? THINKING_LEVEL_SUPERSCRIPTS[0]}`;
 }
 
+function isSimpleOutfitColor(value: string): value is SimpleOutfitColor {
+	return (SIMPLE_OUTFIT_COLORS as readonly string[]).includes(value);
+}
+
+function getOutfitBorderColor(ctx: ExtensionContext): (text: string) => string {
+	const color = activeOutfit?.color;
+	if (color) {
+		if (isSimpleOutfitColor(color)) {
+			const ansi = SIMPLE_OUTFIT_COLOR_ANSI[color];
+			return (text: string) => `${ansi}${text}\u001b[39m`;
+		}
+		try {
+			ctx.ui.theme.getFgAnsi(color as any);
+			return (text: string) => ctx.ui.theme.fg(color as any, text);
+		} catch {
+			// Ignore invalid color names and keep Pi's default editor border.
+		}
+	}
+	return (text: string) => text;
+}
+
 function updateStatus(ctx: ExtensionContext, currentThinking?: ThinkingLevel): void {
 	if (!ctx.hasUI) return;
 	const label = getOutfitLabel(currentThinking);
@@ -286,6 +323,7 @@ function applyEditor(pi: ExtensionAPI, ctx: ExtensionContext): void {
 		const editor = new OutfitPromptEditor(tui, theme, keybindings);
 		requestEditorRender = () => editor.requestRenderNow();
 		editor.outfitLabelProvider = () => getOutfitLabel(pi.getThinkingLevel());
+		editor.borderColor = (text: string) => getOutfitBorderColor(ctx)(text);
 		return editor;
 	});
 }
