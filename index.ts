@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { Type } from "typebox";
-import { Check } from "typebox/schema";
+import { Check } from "typebox/value";
 import YAML from "yaml";
 
 type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
