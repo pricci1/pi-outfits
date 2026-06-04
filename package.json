@@ -1,0 +1,14 @@
+{
+  "name": "outfits",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^CURRENT",
+    "@earendil-works/pi-tui": "^CURRENT",
+    "yaml": "^2.8.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
