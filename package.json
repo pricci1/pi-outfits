@@ -1,15 +1,48 @@
 {
   "name": "pi-outfits",
-  "module": "index.ts",
+  "version": "0.1.0",
+  "description": "Dress Pi for the job with named outfits for prompts, tools, models, thinking levels, and editor colors.",
   "type": "module",
-  "private": true,
-  "devDependencies": {
-    "@earendil-works/pi-coding-agent": "^CURRENT",
-    "@earendil-works/pi-tui": "^CURRENT",
-    "typebox": "^1.1.38",
-    "yaml": "^2.8.3"
+  "files": [
+    "index.ts",
+    "README.md"
+  ],
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "pi",
+    "agent"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pricci1/pi-outfits.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pricci1/pi-outfits/issues"
+  },
+  "homepage": "https://github.com/pricci1/pi-outfits#readme",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "image": "https://raw.githubusercontent.com/pricci1/pi-outfits/master/slop.png"
+  },
+  "scripts": {
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "yaml": "^2.9.0"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "0.78.1",
+    "typebox": "1.1.38",
+    "typescript": "^5.9.3"
   }
 }

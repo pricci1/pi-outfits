@@ -1,8 +1,18 @@
 # pi-outfits
 
-![required slop](./slop.png)
+![required slop](https://raw.githubusercontent.com/pricci1/pi-outfits/master/slop.png)
 
 Dress Pi for the job.
+
+## Install
+
+```bash
+# after publish
+pi install npm:pi-outfits
+
+# from git
+pi install git:github.com/pricci1/pi-outfits
+```
 
 An outfit is a tiny YAML file that picks the agent's thinking cap, shirt, pants, and shoes:
 
