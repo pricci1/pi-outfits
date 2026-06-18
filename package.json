@@ -1,6 +1,6 @@
 {
   "name": "pi-outfits",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Dress Pi for the job with named outfits for prompts, tools, models, thinking levels, and editor colors.",
   "type": "module",
   "files": [
