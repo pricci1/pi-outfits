@@ -26,12 +26,10 @@ An outfit is a tiny YAML file that picks the agent's thinking cap, shirt, pants,
 
 Put one outfit per `.yaml` or `.yml` file in any of these places:
 
-- `~/.agents/outfits/`
 - `~/.pi/outfits/`
-- `<project>/.agents/outfits/`
 - `<project>/.pi/outfits/`
 
-Outfits are loaded in that order. Later files override earlier files with the same filename stem, so project outfits override global outfits and `.pi/outfits` overrides `.agents/outfits` within the same scope. `deep-work.yaml` becomes outfit id `deep-work`.
+Outfits are loaded in that order. Later files override earlier files with the same filename stem, so project outfits override global outfits. `deep-work.yaml` becomes outfit id `deep-work`.
 
 ```yaml
 version: 1
